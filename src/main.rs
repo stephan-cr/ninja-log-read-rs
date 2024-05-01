@@ -5,14 +5,15 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use chrono::serde::ts_nanoseconds;
-use chrono::{DateTime, Local, Utc};
+use anyhow::{anyhow, Context};
+use chrono::{serde::ts_nanoseconds, DateTime, Local, Utc};
 use clap::{crate_name, crate_version, value_parser, Arg, Command};
-use nom::bytes::complete::tag;
-use nom::character::complete::{newline, u8};
-use nom::combinator::all_consuming;
-use nom::IResult;
+use nom::{
+    bytes::complete::tag,
+    character::complete::{newline, u8},
+    combinator::all_consuming,
+    IResult,
+};
 
 #[derive(Debug, serde::Deserialize)]
 struct Record {
@@ -51,12 +52,14 @@ fn main() -> Result<(), anyhow::Error> {
         .get_one::<PathBuf>(".ninja_log")
         .expect("file path to .ninja_log file");
 
-    let file = File::open(filename)?;
+    let file = File::open(filename).with_context(|| format!("opening {}", filename.display()))?;
     let mut buf_reader = BufReader::new(file);
 
     // read version header
     let mut header_line = Vec::new();
-    buf_reader.read_until(b'\n', &mut header_line)?;
+    buf_reader
+        .read_until(b'\n', &mut header_line)
+        .context("try to read ninja log header line")?;
     match parse_header(&header_line) {
         Ok((_, version)) => {
             if version != 5 {
@@ -74,7 +77,7 @@ fn main() -> Result<(), anyhow::Error> {
         .from_reader(buf_reader);
 
     for result in reader.into_deserialize() {
-        let record: Record = result?;
+        let record: Record = result.context("reading record")?;
         let duration = record.end - record.start;
         println!(
             "{duration} {} {}",
