@@ -62,7 +62,7 @@ fn main() -> Result<(), anyhow::Error> {
         .context("try to read ninja log header line")?;
     match parse_header(&header_line) {
         Ok((_, version)) => {
-            if version != 5 {
+            if version < 5 || version > 6 {
                 return Err(anyhow!("unsupported Ninja log version {version}"));
             }
         }
