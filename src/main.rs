@@ -12,7 +12,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{newline, u8},
     combinator::all_consuming,
-    IResult,
+    IResult, Parser,
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -26,7 +26,7 @@ struct Record {
 }
 
 fn parse_header_help(input: &[u8]) -> IResult<&[u8], u8> {
-    let (i, _) = tag(b"# ninja log v")(input)?;
+    let (i, _) = tag(&b"# ninja log v"[..])(input)?;
     let (i, d) = u8(i)?;
     let (i, _) = newline(i)?;
 
@@ -34,7 +34,7 @@ fn parse_header_help(input: &[u8]) -> IResult<&[u8], u8> {
 }
 
 fn parse_header(input: &[u8]) -> IResult<&[u8], u8> {
-    all_consuming(parse_header_help)(input)
+    all_consuming(parse_header_help).parse(input)
 }
 
 fn main() -> Result<(), anyhow::Error> {
